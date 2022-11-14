@@ -1,5 +1,6 @@
 import { it, expect, describe } from "vitest";
 import { m } from "vitest/dist/index-2f5b6168";
+import { aC } from "vitest/dist/types-f302dae9";
 
 interface Spec {
   id: string;
@@ -116,7 +117,7 @@ function getDirectories (specs: Spec[], root: SpecTreeDirectoryNode, sep = '/'):
       parent: parent.node
     }
 
-    map.get(path)!.children.push(fileNode)
+    map.get(path)!.node.children.push(fileNode)
   }
 
   return map
@@ -184,7 +185,6 @@ function deriveSpecTree(
   //   children: [],
   // });
 
-  // console.log({ directories })
 
   // At this point we've got a map of all the directores with their parent.
   // {
@@ -297,9 +297,13 @@ describe("", () => {
 
     // const actual = deriveSpecTree([s3, s4, s1, s2]);
     const actual = deriveSpecTree([s0, s3, s4]);
-    console.log(actual)
+    const root = actual.root
+console.log(actual.map.get('/')?.children)
 
-    expect(actual.name).to.eq('/')
-
+    expect(root.name).to.eq('/')
+    expect(root.type).to.eq('directory')
+    expect(root.parent).to.eq(null)
+    expect(root.collapsed).to.eq(false)
+    expect(root.children).to.have.length(1)
   });
 });
