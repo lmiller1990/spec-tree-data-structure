@@ -39,8 +39,9 @@ interface SpecTreeBaseNode {
 
 interface SpecTreeDirectoryNode extends SpecTreeBaseNode {
   type: "directory";
+  relative: string;
   parent: SpecTreeDirectoryNode | null;
-  children: SpecTreeNode[];
+  children: Set<SpecTreeNode>;
   collapsed: boolean;
 }
 
@@ -63,8 +64,8 @@ type DirectoryMap = Map<
   { node: SpecTreeDirectoryNode; }
 >;
 
-function isRootLevelSpec (path: string, sep: string) {
-  return !path.includes(sep)
+function isRootLevelSpec (path: string, parts: string[]) {
+  return (parts.length === 0 && path === parts[0])
 }
 
 function getDirectories (specs: Spec[], root: SpecTreeDirectoryNode, sep = '/'): DirectoryMap {
@@ -80,7 +81,7 @@ function getDirectories (specs: Spec[], root: SpecTreeDirectoryNode, sep = '/'):
     const acc: string[] = []
     const parts = path.split(sep)
 
-    if (isRootLevelSpec(path, sep)) {
+    if (isRootLevelSpec(path, parts)) {
       // root level spec
       continue
     }
@@ -97,9 +98,10 @@ function getDirectories (specs: Spec[], root: SpecTreeDirectoryNode, sep = '/'):
       const parent = dirNodes.get(acc.slice(0, acc.length - 1).join(sep)) ?? root
       const node: SpecTreeDirectoryNode = {
         type: 'directory',
-        name: dirName,
+        relative: dirName,
+        name: parts[i],
         parent,
-        children: [],
+        children: new Set(),
         collapsed: false
       }
 
@@ -110,58 +112,22 @@ function getDirectories (specs: Spec[], root: SpecTreeDirectoryNode, sep = '/'):
 
 
   function recursivelyAssignDirectories (node: SpecTreeDirectoryNode) {
-    console.log('assigning children for ', node.name)
-    let i = 0
-
     if (node.parent) {
-      i++
-      if (i > 50) {
-        throw Error('oikoipakwdfp')
-      }
-      node.parent.children.push(node)
+      map.get(node.parent.name)?.node.children.add(node)
       recursivelyAssignDirectories(node.parent)
-    }
+    } 
   }
-
-  console.log(map.get('cypress')?.node.children)
-  console.log('===========')
 
   // Next, we assign the children for each directory.
-  console.log(dirNodes.entries())
   for (const [childName, childNode] of dirNodes.entries()) {
     recursivelyAssignDirectories(childNode)
-    // const parentName = childNode.parent?.name
-
-    // // Root has no parent.
-    // if (!parentName) {
-    //   continue
-    // }
-
-    // const val = map.get(parentName)!
-    // const allChildren = Array.from(dirNodes.values()).filter(x => x.parent?.name === parentName)
-    // // const children = dirNodes.get(childName)!
-    // map.set(parentName, { 
-    //   node: {
-    //     ...val.node, 
-    //     children: val.node.children.concat(...allChildren) 
-    //   }
-    // })
-
-    // console.log(childNode?.parent?.name, '->', childName)
-    // console.log('children are => ', allChildren)
-    // const node = map.get(name)!
-    // const children = dirNodes.get(node.node.parent)
-    // console.log({ name , node, children })
-    // map.set(name, { node: _ });
   }
-  console.log('===========')
-  console.log(map.get('cypress')?.node.children)
 
   for (const spec of specs) {
     let { name, path } = splitIntoParts(spec.relative, sep)
     path  ||= '/'
 
-    const parent = isRootLevelSpec(spec.relative, sep) ? root : map.get(path)?.node
+    const parent = isRootLevelSpec(spec.relative, path.split(sep)) ? root : map.get(path)?.node
 
     if (!parent) {
       throw Error(`Could not find directory node with key '${path}'. This should never happen.`)
@@ -175,7 +141,7 @@ function getDirectories (specs: Spec[], root: SpecTreeDirectoryNode, sep = '/'):
       parent
     }
 
-    parent.children.push(fileNode)
+    parent.children.add(fileNode)
   }
 
   return map
@@ -218,15 +184,15 @@ function deriveSpecTree(
 
   const root: SpecTreeDirectoryNode = {
     type: 'directory',
+    relative: '/',
     name: '/',
     parent: null,
     collapsed: false,
-    children: []
+    children: new Set()
   }
 
 
   const directories = getDirectories(specs, root, '/')
-  // console.log({directories})
 
   const rootNode = directories.get('/')?.node
 
@@ -348,17 +314,92 @@ function deriveSpecTree(
 const s0 = createSpec("", "smoke");
 const s1 = createSpec("cypress/e2e", "foo");
 const s2 = createSpec("cypress/e2e/hello", "bar");
-const s3 = createSpec("cypress", "qux");
-const s4 = createSpec("cypress/foo/bar/bax/merp", "loz");
+const s3 = createSpec("cypress", "q1.cy.ts");
+const s4 = createSpec("cypress", "q2.cy.ts");
+const s5 = createSpec("cypress/foo/bar/bax/merp", "loz");
 
-describe("", () => {
-  it("works", () => {
+describe("deriveSpecTree", () => {
+  it("handles a nested spec", () => {
+    const actual = deriveSpecTree([
+      createSpec("cypress/e2e", "foo")
+    ])
 
+    // root is always a single node, path and name is always `/`
+    const root = actual.root
+    expect(root.name).to.eq('/')
+    expect(root.type).to.eq('directory')
+    expect(root.parent).to.eq(null)
+    expect(root.collapsed).to.eq(false)
+
+    // first level is cypress
+    const cypressDir = Array.from(root.children).filter(filterDirectoryNodes)[0]
+    expect(cypressDir.name).to.eq('cypress')
+    expect(cypressDir.relative).to.eq('cypress')
+    expect(Array.from(cypressDir.children).length).to.eq(1)
+
+    // second level is cypress/e2e
+    const e2eDir = Array.from(cypressDir.children).filter(filterDirectoryNodes)[0]
+    expect(e2eDir.name).to.eq('e2e')
+    expect(e2eDir.relative).to.eq('cypress/e2e')
+    expect(Array.from(cypressDir.children).length).to.eq(1)
+
+    // finally, the spec
+    const fooSpec = Array.from(e2eDir.children).filter(filterFileNodes)[0]
+    expect(fooSpec.name).to.eq('foo.cy.ts')
+    expect(fooSpec.data.relative).to.eq('cypress/e2e/foo.cy.ts')
+    expect(fooSpec.directory).to.eq('cypress/e2e')
+    expect(fooSpec.parent.relative).to.eq('cypress/e2e')
+  });
+
+  it("handles several nested specs", () => {
+    const actual = deriveSpecTree([
+      createSpec("cypress", "foo"),
+      createSpec("cypress/e2e", "bar"),
+      createSpec("cypress/e2e/bar", "qux"),
+    ])
+
+    // root is always a single node, path and name is always `/`
+    const root = actual.root
+    expect(root.name).to.eq('/')
+    expect(root.type).to.eq('directory')
+    expect(root.parent).to.eq(null)
+    expect(root.collapsed).to.eq(false)
+
+    // first level is cypress
+    const cypressDir = Array.from(root.children).filter(filterDirectoryNodes)[0]
+    expect(cypressDir.name).to.eq('cypress')
+    expect(cypressDir.relative).to.eq('cypress')
+
+    // There are two children.
+    // 1. cypress/e2e directory
+    // 2. cypress/foo.cy.ts
+    const cypressChildren = Array.from(cypressDir.children)
+    expect(cypressChildren.length).to.eq(2)
+
+    const fooSpec = cypressChildren.filter(filterFileNodes)[0]
+    const e2eDir = cypressChildren.filter(filterDirectoryNodes)[0]
+
+    expect(fooSpec.name).to.eq('foo.cy.ts')
+    expect(fooSpec.data.relative).to.eq('cypress/foo.cy.ts')
+    expect(fooSpec.directory).to.eq('cypress')
+    expect(fooSpec.parent.relative).to.eq('cypress')
+
+    expect(e2eDir.name).to.eq('e2e')
+    expect(e2eDir.relative).to.eq('cypress/e2e')
+    expect(e2eDir.parent).to.eq(cypressDir)
+    expect(e2eDir.collapsed).to.eq(false)
+  });
+
+  it.only("handles a single spec at the root level", () => {
     // const actual = deriveSpecTree([s3, s4, s1, s2]);
-    const actual = deriveSpecTree([s0, s3, s4]);
+    // const actual = deriveSpecTree([s0, s3, s5]);
+    const actual = deriveSpecTree([
+      createSpec("", "smoke"),
+    ])
+
     const root = actual.root
     // console.log(root.children[0].children)
-// console.log(actual.map.get('/')?.node.children)
+    console.log(Array.from(root.children))
 
     expect(root.name).to.eq('/')
     expect(root.type).to.eq('directory')
@@ -367,7 +408,7 @@ describe("", () => {
     // console.log('chilrdren!!', root.children)
     // expect(root.children).to.have.length(2)
 
-    const rootDirectorySpec = root.children[0] as SpecTreeFileNode
+    // const rootDirectorySpec = root.children[0] as SpecTreeFileNode
     // expect(rootDirectorySpec.name).to.eq('smoke.cy.ts')
     // expect(rootDirectorySpec.type).to.eq('file')
     // expect(rootDirectorySpec.data).to.eq(s0)
