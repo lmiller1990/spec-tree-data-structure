@@ -10,9 +10,14 @@ export interface Spec {
 }
 
 export interface SpecListOptions {
+  /** either / for posix for \\ for windows */
   sep?: string
+
+  /** string to filter by. */
   search?: string;
-  collapsedDirs?: string[];
+
+  /** Relative paths for all collapsed directories */
+  collapsedDirs: Set<string>;
 }
 
 export interface SpecTreeDirectoryNode {
@@ -72,6 +77,7 @@ export function deriveSpecTree(
   root: SpecTreeDirectoryNode;
   map: DirectoryMap;
 } {
+
   const sep = options?.sep ?? "/";
   const search = options?.search ?? null;
   const specs = search
@@ -83,7 +89,7 @@ export function deriveSpecTree(
     relative: "/",
     name: "/",
     parent: null,
-    collapsed: false,
+    collapsed: options?.collapsedDirs?.has('/') ?? false,
     children: new Set(),
   };
 
@@ -136,7 +142,7 @@ export function deriveSpecTree(
         name: parts[i],
         parent,
         children: new Set(),
-        collapsed: false,
+        collapsed: options?.collapsedDirs?.has(dirName) ?? false,
       };
 
       dirNodes.set(dirName, node);
