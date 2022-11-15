@@ -5,21 +5,20 @@ import {
   deriveSpecTree,
   filterDirectoryNodes,
   filterFileNodes,
-  specs,
   SpecTreeDirectoryNode,
   Spec,
 } from "./tree";
+
+const cypress_s1 = createSpec("cypress", "s1");
+const cypress_d1_s2 = createSpec("cypress/d1", "s2");
+const cypress_d1_d2_s3 = createSpec("cypress/d1/d2", "s3");
+const cypress_q2_q3_q4_q5_s5 = createSpec("cypress/q2/q3/q4/q5", "s5");
 
 describe("getAllFileInDirectory", () => {
   it("gets total files for a given directory", () => {
     function sortForTesting (specs: Spec[]) {
       return specs.sort((x, y) => x.name.length < y.name.length ? 1 : -1);
     }
-
-    const cypress_s1 = createSpec("cypress", "s1");
-    const cypress_d1_s2 = createSpec("cypress/d1", "s2");
-    const cypress_d1_d2_s3 = createSpec("cypress/d1/d2", "s3");
-    const cypress_q2_q3_q4_q5_s5 = createSpec("cypress/q2/q3/q4/q5", "s5");
 
     const specs = [
       cypress_s1,
@@ -38,7 +37,25 @@ describe("getAllFileInDirectory", () => {
   });
 });
 
+function array<T>(list: Set<T> | Map<string, T>):T [] {
+  return Array.from(list.values());
+}
+
 describe("deriveSpecTree", () => {
+  it('works for deeply nested specs', () => {
+    const specs = [
+      cypress_s1,
+      cypress_d1_s2,
+      cypress_q2_q3_q4_q5_s5,
+    ];
+
+    const { root, map } = deriveSpecTree(specs);
+
+    // only child should be `cypress`
+    console.log(root.children)
+    expect(array(root.children).length).to.eq(1)
+  })
+
   it("handles a nested spec", () => {
     const actual = deriveSpecTree([createSpec("cypress/e2e", "foo")]);
 
@@ -50,23 +67,23 @@ describe("deriveSpecTree", () => {
     expect(root.collapsed).to.eq(false);
 
     // first level is cypress
-    const cypressDir = Array.from(root.children).filter(
+    const cypressDir = array(root.children).filter(
       filterDirectoryNodes
     )[0];
     expect(cypressDir.name).to.eq("cypress");
     expect(cypressDir.relative).to.eq("cypress");
-    expect(Array.from(cypressDir.children).length).to.eq(1);
+    expect(array(cypressDir.children).length).to.eq(1);
 
     // second level is cypress/e2e
-    const e2eDir = Array.from(cypressDir.children).filter(
+    const e2eDir = array(cypressDir.children).filter(
       filterDirectoryNodes
     )[0];
     expect(e2eDir.name).to.eq("e2e");
     expect(e2eDir.relative).to.eq("cypress/e2e");
-    expect(Array.from(cypressDir.children).length).to.eq(1);
+    expect(array(cypressDir.children).length).to.eq(1);
 
     // finally, the spec
-    const fooSpec = Array.from(e2eDir.children).filter(filterFileNodes)[0];
+    const fooSpec = array(e2eDir.children).filter(filterFileNodes)[0];
     expect(fooSpec.name).to.eq("foo.cy.ts");
     expect(fooSpec.data.relative).to.eq("cypress/e2e/foo.cy.ts");
     expect(fooSpec.parent.relative).to.eq("cypress/e2e");
@@ -87,7 +104,7 @@ describe("deriveSpecTree", () => {
     expect(root.collapsed).to.eq(false);
 
     // first level is cypress
-    const cypressDir = Array.from(root.children).filter(
+    const cypressDir = array(root.children).filter(
       filterDirectoryNodes
     )[0];
     expect(cypressDir.name).to.eq("cypress");
@@ -96,7 +113,7 @@ describe("deriveSpecTree", () => {
     // There are two children.
     // 1. cypress/e2e directory
     // 2. cypress/foo.cy.ts
-    const cypressChildren = Array.from(cypressDir.children);
+    const cypressChildren = array(cypressDir.children);
     expect(cypressChildren.length).to.eq(2);
 
     const fooSpec = cypressChildren.filter(filterFileNodes)[0];
@@ -127,16 +144,16 @@ describe("deriveSpecTree", () => {
     ]);
 
     // only child is directory `cypress`
-    const rootChildren = Array.from(actual.root.children);
+    const rootChildren = array(actual.root.children);
     expect(rootChildren.length).to.eq(1);
     expect(rootChildren[0].type).to.eq("directory");
     expect(rootChildren[0].name).to.eq("cypress");
 
     const cypressNode = rootChildren[0] as SpecTreeDirectoryNode;
-    const cypressChildrenFiles = Array.from(cypressNode.children).filter(
+    const cypressChildrenFiles = array(cypressNode.children).filter(
       filterFileNodes
     );
-    const cypressChildrenDirs = Array.from(cypressNode.children).filter(
+    const cypressChildrenDirs = array(cypressNode.children).filter(
       filterDirectoryNodes
     );
 
@@ -146,7 +163,7 @@ describe("deriveSpecTree", () => {
     expect(cypressChildrenDirs[0].name).to.eq("d1");
 
     const d1 = cypressChildrenDirs[0];
-    const d1Children = Array.from(d1.children);
+    const d1Children = array(d1.children);
     expect(d1Children.length).to.eq(2);
 
     const d1_specs = d1Children.filter(filterFileNodes);
@@ -159,7 +176,7 @@ describe("deriveSpecTree", () => {
     expect(d1_dirs[0].parent?.relative).to.eq("cypress/d1");
 
     const d2 = d1_dirs[0];
-    const d2Children = Array.from(d2.children);
+    const d2Children = array(d2.children);
     expect(d2Children.length).to.eq(1);
 
     const d2_specs = d2Children.filter(filterFileNodes);
@@ -178,16 +195,16 @@ describe("deriveSpecTree", () => {
       createSpec("cypress", "q2"),
     ]);
     // only child is directory `cypress`
-    const rootChildren = Array.from(actual.root.children);
+    const rootChildren = array(actual.root.children);
     expect(rootChildren.length).to.eq(1);
     expect(rootChildren[0].type).to.eq("directory");
     expect(rootChildren[0].name).to.eq("cypress");
 
     const cypressNode = rootChildren[0] as SpecTreeDirectoryNode;
-    const cypressChildrenFiles = Array.from(cypressNode.children).filter(
+    const cypressChildrenFiles = array(cypressNode.children).filter(
       filterFileNodes
     );
-    const cypressChildrenDirs = Array.from(cypressNode.children).filter(
+    const cypressChildrenDirs = array(cypressNode.children).filter(
       filterDirectoryNodes
     );
 
@@ -206,7 +223,7 @@ describe("deriveSpecTree", () => {
     expect(root.parent).to.eq(null);
     expect(root.collapsed).to.eq(false);
 
-    const children = Array.from(root.children);
+    const children = array(root.children);
     expect(children.length).to.eq(1);
 
     const fooSpec = children.filter(filterFileNodes)[0];
@@ -227,13 +244,13 @@ describe("deriveSpecTree", () => {
     );
 
     // cypress directory
-    const rootChildren = Array.from(actual.root.children);
+    const rootChildren = array(actual.root.children);
     expect(rootChildren.length).to.eq(1);
     expect(rootChildren[0].name).to.eq("cypress");
 
     // grab the only directory, which should be `component`
     // since nothing in the other two specs matches the search term
-    const dirs = Array.from(
+    const dirs = array(
       (rootChildren[0] as SpecTreeDirectoryNode).children
     ).filter(filterDirectoryNodes);
 
@@ -243,8 +260,8 @@ describe("deriveSpecTree", () => {
     expect(componentDir.name).to.eq("component");
 
     // Should be qux
-    expect(Array.from(componentDir.children).length).to.eq(1);
-    const quxSpec = Array.from(componentDir.children).filter(
+    expect(array(componentDir.children).length).to.eq(1);
+    const quxSpec = array(componentDir.children).filter(
       filterFileNodes
     )[0];
     expect(quxSpec.name).to.eq("qux.cy.ts");

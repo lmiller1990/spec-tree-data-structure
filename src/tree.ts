@@ -25,7 +25,7 @@ export interface SpecTreeDirectoryNode {
   type: "directory";
   relative: string;
   parent: SpecTreeDirectoryNode | null;
-  children: Set<SpecTreeNode>;
+  children: Map<string, SpecTreeNode>;
   collapsed: boolean;
 }
 
@@ -90,7 +90,7 @@ export function deriveSpecTree(
     name: "/",
     parent: null,
     collapsed: options?.collapsedDirs?.has('/') ?? false,
-    children: new Set(),
+    children: new Map(),
   };
 
 
@@ -141,7 +141,7 @@ export function deriveSpecTree(
         relative: dirName,
         name: parts[i],
         parent,
-        children: new Set(),
+        children: new Map(),
         collapsed: options?.collapsedDirs?.has(dirName) ?? false,
       };
 
@@ -151,8 +151,10 @@ export function deriveSpecTree(
   }
 
   const recursivelyAssignDirectories = (node: SpecTreeDirectoryNode) => {
+    if (node.relative === 'cypress') {
+    }
     if (node.parent) {
-      map.get(node.parent.relative)?.node.children.add(node);
+      map.get(node.parent.relative)?.node.children.set(node.relative, node);
       recursivelyAssignDirectories(node.parent);
     }
   };
@@ -187,7 +189,7 @@ export function deriveSpecTree(
       parent,
     };
 
-    parent.children.add(fileNode);
+    parent.children.set(name, fileNode);
   }
 
   const rootNode = map.get("/")?.node;
@@ -221,21 +223,19 @@ function findNodeByRelativePath (relativePath: string, tree: SpecTreeDirectoryNo
   function walk(nodes: SpecTreeDirectoryNode[]): SpecTreeDirectoryNode[] {
     const theNode = nodes.find(x => x.relative === relativePath)
     if (theNode) {
-      // console.log('asdfas', theNode)
       return [theNode]
     }
 
     return nodes
       .filter(filterDirectoryNodes)
       .map((node) => {
-        const dirs = Array.from(node.children).filter(filterDirectoryNodes)
-        // console.log(relativePath, dirs.map(x => x.relative))
+        const dirs = Array.from(node.children.values()).filter(filterDirectoryNodes)
         return walk(dirs)
       })
       .flat();
   }
 
-  const found = walk(Array.from(tree.children).filter(filterDirectoryNodes))
+  const found = walk(Array.from(tree.children.values()).filter(filterDirectoryNodes))
   if (found) {
     return found[0]
   }
@@ -252,7 +252,7 @@ export function getAllFileInDirectory(node: SpecTreeDirectoryNode): SpecTreeFile
       files.push(node)
     } else {
       // continue...
-      Array.from(node.children).map(walk)
+      Array.from(node.children.values()).map(n => walk(n))
     }
   }
 

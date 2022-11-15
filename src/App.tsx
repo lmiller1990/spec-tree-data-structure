@@ -43,7 +43,7 @@ const Directory: FunctionalComponent<{
       </li>
       {!props.node.collapsed && (
         <ul>
-          {Array.from(props.node.children).map((child) =>
+          {Array.from(props.node.children.values()).map((child) =>
             makeChild(child, props.handleCollapse)
           )}
         </ul>
@@ -62,7 +62,11 @@ export const App = defineComponent({
       createSpec("cypress", "s1"),
       createSpec("cypress/d1", "s2"),
       createSpec("cypress/d1/d2", "s3"),
-      createSpec("cypress/q2/q3/q4/q5", "s5")
+      createSpec("cypress/q2/q3/q4/q5", "s5"),
+      // createSpec("cypress", "s1"),
+      // createSpec("cypress/d1", "s2"),
+      // createSpec("cypress/d1/d2", "s3"),
+      // createSpec("cypress/q2/q3/q4/q5", "s5")
     ];
 
     const opts = reactive<SpecListOptions>({
@@ -98,7 +102,7 @@ export const App = defineComponent({
         <ul>{makeChild(tree.value.root, handleCollapse)}</ul>
 
         <hr />
-        {/* <pre>{JSON.stringify(specs, null, 4)}</pre> */}
+        <pre>{JSON.stringify(specs, null, 4)}</pre>
       </>
     );
   },
