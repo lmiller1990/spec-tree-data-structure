@@ -2,10 +2,12 @@ import { defineComponent, FunctionalComponent, ref } from "vue";
 import {
   createSpec,
   deriveSpecTree,
+  getAllFileInDirectory,
   SpecTreeDirectoryNode,
   SpecTreeFileNode,
   SpecTreeNode,
 } from "./tree";
+import "./style.css";
 
 function makeChild(node: SpecTreeNode) {
   console.log(node.type, node.name);
@@ -19,9 +21,19 @@ function makeChild(node: SpecTreeNode) {
 const Directory: FunctionalComponent<{ node: SpecTreeDirectoryNode }> = (
   props
 ) => {
+  const specs = getAllFileInDirectory(props.node)
+  const names = specs.map(x => `${x.data.fileName}${x.data.specFileExtension}`)
+
   return (
     <>
-      <li>{props.node.name}</li>
+      <li>
+        <span class="directory-name">
+          {props.node.name}
+        </span>
+        <span class="light">
+          (Contains {specs.length} specs: <span class="lighter">{names.join(", ")}</span>)
+        </span>
+      </li>
       <ul>{Array.from(props.node.children).map(makeChild)}</ul>
     </>
   );

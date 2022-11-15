@@ -213,6 +213,50 @@ export function createSpec(p: string, name: string): Spec {
   };
 }
 
+function findNodeByRelativePath (relativePath: string, tree: SpecTreeDirectoryNode): SpecTreeDirectoryNode {
+  function walk(nodes: SpecTreeDirectoryNode[]): SpecTreeDirectoryNode[] {
+    const theNode = nodes.find(x => x.relative === relativePath)
+    if (theNode) {
+      // console.log('asdfas', theNode)
+      return [theNode]
+    }
+
+    return nodes
+      .filter(filterDirectoryNodes)
+      .map((node) => {
+        const dirs = Array.from(node.children).filter(filterDirectoryNodes)
+        // console.log(relativePath, dirs.map(x => x.relative))
+        return walk(dirs)
+      })
+      .flat();
+  }
+
+  const found = walk(Array.from(tree.children).filter(filterDirectoryNodes))
+  if (found) {
+    return found[0]
+  }
+  // return walk(node, tree)
+
+  throw Error('Could not find node in tree.')
+}
+
+export function getAllFileInDirectory(node: SpecTreeDirectoryNode): SpecTreeFileNode[] {
+  const files: SpecTreeFileNode[] = []
+
+  function walk (node: SpecTreeNode) {
+    if (node.type === 'file') {
+      files.push(node)
+    } else {
+      // continue...
+      Array.from(node.children).map(walk)
+    }
+  }
+
+  walk(node)
+
+  return files
+}
+
 const s0 = createSpec("", "smoke");
 const s1 = createSpec("cypress/e2e", "foo");
 const s2 = createSpec("cypress/e2e/hello", "bar");
