@@ -15,11 +15,8 @@ export interface SpecListOptions {
   collapsedDirs?: string[];
 }
 
-export interface SpecTreeBaseNode {
+export interface SpecTreeDirectoryNode {
   name: string;
-}
-
-export interface SpecTreeDirectoryNode extends SpecTreeBaseNode {
   type: "directory";
   relative: string;
   parent: SpecTreeDirectoryNode | null;
@@ -27,8 +24,9 @@ export interface SpecTreeDirectoryNode extends SpecTreeBaseNode {
   collapsed: boolean;
 }
 
-export interface SpecTreeFileNode extends SpecTreeBaseNode {
+export interface SpecTreeFileNode {
   type: "file";
+  name: string;
   data: Spec;
   parent: SpecTreeDirectoryNode;
 }
