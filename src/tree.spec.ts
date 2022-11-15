@@ -7,6 +7,7 @@ import {
   filterFileNodes,
   SpecTreeDirectoryNode,
   Spec,
+  array,
 } from "./tree";
 
 const cypress_s1 = createSpec("cypress", "s1");
@@ -37,10 +38,6 @@ describe("getAllFileInDirectory", () => {
   });
 });
 
-function array<T>(list: Set<T> | Map<string, T>):T [] {
-  return Array.from(list.values());
-}
-
 describe("deriveSpecTree", () => {
   it('works for deeply nested specs', () => {
     const specs = [
@@ -52,7 +49,6 @@ describe("deriveSpecTree", () => {
     const { root, map } = deriveSpecTree(specs);
 
     // only child should be `cypress`
-    console.log(root.children)
     expect(array(root.children).length).to.eq(1)
   })
 

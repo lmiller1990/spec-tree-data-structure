@@ -1,8 +1,17 @@
-import { computed, defineComponent, FunctionalComponent, reactive, ref } from "vue";
 import {
+  computed,
+  defineComponent,
+  FunctionalComponent,
+  reactive,
+  ref,
+} from "vue";
+import {
+  array,
   createSpec,
   deriveSpecTree,
+  filterFileNodes,
   getAllFileInDirectory,
+  groupSpecTreeNodes,
   SpecListOptions,
   SpecTreeDirectoryNode,
   SpecTreeFileNode,
@@ -10,26 +19,20 @@ import {
 } from "./tree";
 import "./style.css";
 
-type HandleCollapse = (node: SpecTreeDirectoryNode) => void
-
-function makeChild(node: SpecTreeNode, handleCollapse: HandleCollapse) {
-  return node.type === "directory" ? (
-    <Directory node={node} handleCollapse={handleCollapse} />
-  ) : (
-    <File node={node} />
-  );
-}
+type HandleCollapse = (node: SpecTreeDirectoryNode) => void;
 
 const Directory: FunctionalComponent<{
   node: SpecTreeDirectoryNode;
-  handleCollapse: HandleCollapse
+  handleCollapse: HandleCollapse;
 }> = (props) => {
-  const specs = getAllFileInDirectory(props.node);
-  const names = specs.map(
+  const fileList = getAllFileInDirectory(props.node);
+  const names = fileList.map(
     (x) => `${x.data.fileName}${x.data.specFileExtension}`
   );
 
-  const icon = props.node.collapsed ? '>' : 'v'
+  const { files, directories } = groupSpecTreeNodes(props.node);
+
+  const icon = props.node.collapsed ? ">" : "v";
 
   return (
     <>
@@ -37,16 +40,21 @@ const Directory: FunctionalComponent<{
         <span class="directory-name">{props.node.name}</span>
         <button onClick={() => props.handleCollapse(props.node)}>{icon}</button>
         <span class="light">
-          (Contains {specs.length} specs:{" "}
+          (Contains {fileList.length} specs:{" "}
           <span class="lighter">{names.join(", ")}</span>)
         </span>
       </li>
       {!props.node.collapsed && (
-        <ul>
-          {Array.from(props.node.children.values()).map((child) =>
-            makeChild(child, props.handleCollapse)
-          )}
-        </ul>
+        <>
+          <ul>
+            {files.map((file) => (
+              <File node={file} />
+            ))}
+            {directories.map((child) => (
+              <Directory node={child} handleCollapse={props.handleCollapse} />
+            ))}
+          </ul>
+        </>
       )}
     </>
   );
@@ -70,13 +78,13 @@ export const App = defineComponent({
     ];
 
     const opts = reactive<SpecListOptions>({
-      sep: '/',
-      search: '',
-      collapsedDirs: new Set()
+      sep: "/",
+      search: "",
+      collapsedDirs: new Set(),
     });
 
     const handleCollapse: HandleCollapse = (node) => {
-      const contained = opts.collapsedDirs.has(node.relative)
+      const contained = opts.collapsedDirs.has(node.relative);
       if (contained) {
         // remove
         opts.collapsedDirs = new Set(
@@ -88,10 +96,7 @@ export const App = defineComponent({
           node.relative,
         ]);
       }
-    }
-
-    setTimeout(() => {
-    }, 1000)
+    };
 
     const tree = computed(() => {
       return deriveSpecTree(specs, { collapsedDirs: opts.collapsedDirs });
@@ -99,9 +104,12 @@ export const App = defineComponent({
 
     return () => (
       <>
-        <ul>{makeChild(tree.value.root, handleCollapse)}</ul>
+        <ul>
+          <Directory node={tree.value.root} handleCollapse={handleCollapse} />
+        </ul>
 
         <hr />
+        <h4>Debugging: specs</h4>
         <pre>{JSON.stringify(specs, null, 4)}</pre>
       </>
     );

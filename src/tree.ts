@@ -1,3 +1,6 @@
+import { noopDirectiveTransform } from "@vue/compiler-core";
+import { aC } from "vitest/dist/types-f302dae9";
+
 export interface Spec {
   name: string;
   specType: string;
@@ -219,30 +222,53 @@ export function createSpec(p: string, name: string): Spec {
   };
 }
 
-function findNodeByRelativePath (relativePath: string, tree: SpecTreeDirectoryNode): SpecTreeDirectoryNode {
-  function walk(nodes: SpecTreeDirectoryNode[]): SpecTreeDirectoryNode[] {
-    const theNode = nodes.find(x => x.relative === relativePath)
-    if (theNode) {
-      return [theNode]
-    }
-
-    return nodes
-      .filter(filterDirectoryNodes)
-      .map((node) => {
-        const dirs = Array.from(node.children.values()).filter(filterDirectoryNodes)
-        return walk(dirs)
-      })
-      .flat();
-  }
-
-  const found = walk(Array.from(tree.children.values()).filter(filterDirectoryNodes))
-  if (found) {
-    return found[0]
-  }
-  // return walk(node, tree)
-
-  throw Error('Could not find node in tree.')
+interface GroupedNodes {
+  files: SpecTreeFileNode[]
+  directories: SpecTreeDirectoryNode[]
 }
+
+export function groupSpecTreeNodes (node: SpecTreeDirectoryNode): GroupedNodes {
+  return array(node.children).reduce<GroupedNodes>((acc, curr) => {
+    if (curr.type === 'file') {
+      acc.files.push(curr)
+    } else {
+      acc.directories.push(curr)
+    }
+    return acc
+  }, {
+    files: [],
+    directories: []
+  });
+}
+
+export function array<T>(list: Set<T> | Map<string, T>):T [] {
+  return Array.from(list.values());
+}
+
+// function findNodeByRelativePath (relativePath: string, tree: SpecTreeDirectoryNode): SpecTreeDirectoryNode {
+//   function walk(nodes: SpecTreeDirectoryNode[]): SpecTreeDirectoryNode[] {
+//     const theNode = nodes.find(x => x.relative === relativePath)
+//     if (theNode) {
+//       return [theNode]
+//     }
+
+//     return nodes
+//       .filter(filterDirectoryNodes)
+//       .map((node) => {
+//         const dirs = Array.from(node.children.values()).filter(filterDirectoryNodes)
+//         return walk(dirs)
+//       })
+//       .flat();
+//   }
+
+//   const found = walk(Array.from(tree.children.values()).filter(filterDirectoryNodes))
+//   if (found) {
+//     return found[0]
+//   }
+//   // return walk(node, tree)
+
+//   throw Error('Could not find node in tree.')
+// }
 
 export function getAllFileInDirectory(node: SpecTreeDirectoryNode): SpecTreeFileNode[] {
   const files: SpecTreeFileNode[] = []
