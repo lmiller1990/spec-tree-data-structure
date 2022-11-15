@@ -91,6 +91,7 @@ export const App = defineComponent({
           [...opts.collapsedDirs.values()].filter((x) => x !== node.relative)
         );
       } else {
+        // add
         opts.collapsedDirs = new Set([
           ...opts.collapsedDirs.values(),
           node.relative,
@@ -99,11 +100,18 @@ export const App = defineComponent({
     };
 
     const tree = computed(() => {
-      return deriveSpecTree(specs, { collapsedDirs: opts.collapsedDirs });
+      return deriveSpecTree(specs, opts);
     });
 
     return () => (
       <>
+        <input
+          value={opts.search}
+          placeholder="Search..."
+          onInput={(event) =>
+            (opts.search = (event.currentTarget as HTMLInputElement).value)
+          }
+        />
         <ul>
           <Directory node={tree.value.root} handleCollapse={handleCollapse} />
         </ul>
