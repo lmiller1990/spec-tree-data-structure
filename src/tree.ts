@@ -1,6 +1,3 @@
-import { noopDirectiveTransform } from "@vue/compiler-core";
-import { aC } from "vitest/dist/types-f302dae9";
-
 export interface Spec {
   name: string;
   specType: string;
@@ -28,6 +25,10 @@ export interface SpecTreeDirectoryNode {
   type: "directory";
   relative: string;
   parent: SpecTreeDirectoryNode | null;
+  /** This is technical derived data.
+   *  It's the count of parent.parent.parent... but we cache for perf. reasons. 
+   */
+  depth: number;
   children: Map<string, SpecTreeNode>;
   collapsed: boolean;
 }
@@ -91,6 +92,7 @@ export function deriveSpecTree(
     type: "directory",
     relative: "/",
     name: "/",
+    depth: 0,
     parent: null,
     collapsed: options?.collapsedDirs?.has('/') ?? false,
     children: new Map(),
@@ -139,11 +141,18 @@ export function deriveSpecTree(
       const existing = dirNodes.get(n);
       const parent = existing ?? root;
 
+      let depth = 1
+      let p: SpecTreeDirectoryNode | null = parent
+      while (p = p.parent) {
+        depth++
+      }
+
       const node: SpecTreeDirectoryNode = {
         type: "directory",
         relative: dirName,
         name: parts[i],
         parent,
+        depth,
         children: new Map(),
         collapsed: options?.collapsedDirs?.has(dirName) ?? false,
       };

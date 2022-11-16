@@ -50,6 +50,35 @@ describe("deriveSpecTree", () => {
 
     // only child should be `cypress`
     expect(array(root.children).length).to.eq(1)
+    expect(root.depth).to.eq(0)
+
+    const cypressDir = array(root.children).filter(filterDirectoryNodes)
+    expect(cypressDir[0].depth).to.eq(1)
+
+    const d1 = array(cypressDir[0].children).filter(filterDirectoryNodes)[0]
+    expect(d1.name).to.eq('d1')
+    expect(d1.depth).to.eq(2)
+
+    const q2 = array(cypressDir[0].children).filter(filterDirectoryNodes)[1]
+    expect(q2.name).to.eq('q2')
+    expect(q2.depth).to.eq(2)
+
+    const q3 = array(q2.children).filter(filterDirectoryNodes)[0]
+    expect(q3.name).to.eq('q3')
+    expect(q3.depth).to.eq(3)
+
+    const q4 = array(q3.children).filter(filterDirectoryNodes)[0]
+    expect(q4.name).to.eq('q4')
+    expect(q4.depth).to.eq(4)
+
+    const q5 = array(q4.children).filter(filterDirectoryNodes)[0]
+    expect(q5.name).to.eq('q5')
+    expect(q5.depth).to.eq(5)
+
+    const s5 = array(q5.children).filter(filterFileNodes)[0]
+    expect(s5.name).to.eq('s5.cy.ts')
+    // FileNode do not have a `depth` property - just get it from the parent.
+    expect(s5.parent.depth).to.eq(5)
   })
 
   it("handles a nested spec", () => {
