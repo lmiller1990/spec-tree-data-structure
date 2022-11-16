@@ -18,51 +18,9 @@ import {
   SpecTreeNode,
 } from "./tree";
 import "./style.css";
+import Directory from "./Directory.vue";
 
 type HandleCollapse = (node: SpecTreeDirectoryNode) => void;
-
-const Directory: FunctionalComponent<{
-  node: SpecTreeDirectoryNode;
-  handleCollapse: HandleCollapse;
-}> = (props) => {
-  const fileList = getAllFileInDirectory(props.node);
-  const names = fileList.map(
-    (x) => `${x.data.fileName}${x.data.specFileExtension}`
-  );
-
-  const { files, directories } = groupSpecTreeNodes(props.node);
-
-  const icon = props.node.collapsed ? ">" : "v";
-
-  return (
-    <>
-      <li>
-        <span class="directory-name">{props.node.name}</span>
-        <button onClick={() => props.handleCollapse(props.node)}>{icon}</button>
-        <span class="light">
-          (Contains {fileList.length} specs:{" "}
-          <span class="lighter">{names.join(", ")}</span>)
-        </span>
-      </li>
-      {!props.node.collapsed && (
-        <>
-          <ul>
-            {files.map((file) => (
-              <File node={file} />
-            ))}
-            {directories.map((child) => (
-              <Directory node={child} handleCollapse={props.handleCollapse} />
-            ))}
-          </ul>
-        </>
-      )}
-    </>
-  );
-};
-
-const File: FunctionalComponent<{ node: SpecTreeFileNode }> = (props) => {
-  return <li>{props.node.name}</li>;
-};
 
 export const App = defineComponent({
   setup(props) {
@@ -113,7 +71,10 @@ export const App = defineComponent({
           }
         />
         <ul>
-          <Directory node={tree.value.root} handleCollapse={handleCollapse} />
+          <Directory
+            node={tree.value.root}
+            onHandleCollapse={handleCollapse} 
+          />
         </ul>
 
         <hr />
